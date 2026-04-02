@@ -24,6 +24,10 @@ type Flags struct {
 	kRaw       string        // Raw -k option value, used to determine the key column
 	Blanks     *atomic.Int32 // Counter of blank lines, relevant when -k is active
 	ClmnToSort int           // Index of the column to sort when -k is used
+	Nodes      string        // Comma-separated worker nodes for distributed sorting
+	Serve      bool          // Run as worker server
+	Port       string        // Port for worker server
+	Quorum     int           // Required quorum size for remote sorting
 }
 
 // Parse parses the command-line flags and returns a Flags struct.
@@ -40,6 +44,10 @@ func Parse() (*Flags, error) {
 	pflag.BoolVarP(&flags.B, "ignore-leading-blanks", "b", false, "ignore leading blanks")
 	pflag.BoolVarP(&flags.C, "check", "c", false, "check for sorted input; do not sort")
 	pflag.BoolVarP(&flags.H, "human-numeric-sort", "h", false, "compare human readable numbers (e.g., 2K 1G)")
+	pflag.StringVar(&flags.Nodes, "nodes", "", "comma-separated worker nodes")
+	pflag.BoolVar(&flags.Serve, "serve", false, "run as worker")
+	pflag.StringVar(&flags.Port, "port", "8080", "port for worker")
+	pflag.IntVar(&flags.Quorum, "quorum", 1, "quorum size")
 
 	pflag.Parse()
 

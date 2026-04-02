@@ -16,7 +16,7 @@ func TestSortChunkAndSaveChunk(t *testing.T) {
 	lines := []string{"b", "a", "c"}
 	expectedLines := []string{"a", "b", "c"}
 
-	sortChunk(lines, new(flags.Flags))
+	SortChunk(lines, new(flags.Flags))
 
 	for i := range lines {
 		if lines[i] != expectedLines[i] {

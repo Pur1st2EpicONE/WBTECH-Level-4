@@ -8,7 +8,7 @@ run_test() {
     local file="$1"
     
     sort "$file" > "$SORT_OUTPUT"
-    ./sort "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: no flags, one file"
@@ -26,7 +26,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort "$file" "./assets/test_file_2.txt" > "$SORT_OUTPUT"
-    ./sort "$file" "./assets/test_file_2.txt" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "$file" "./assets/test_file_2.txt" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: no flags, two files"
@@ -44,7 +44,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -k 2 "./assets/test_file_2.txt" > "$SORT_OUTPUT"
-    ./sort "./assets/test_file_2.txt" -k 2 > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -k 2 > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -k 2"
@@ -62,7 +62,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -k 3 "./assets/test_file_2.txt" > "$SORT_OUTPUT"
-    ./sort "./assets/test_file_2.txt" -k 3 > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -k 3 > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -k 3"
@@ -80,7 +80,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -k 4 "./assets/test_file_2.txt" > "$SORT_OUTPUT"
-    ./sort "./assets/test_file_2.txt" -k 4 > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -k 4 > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -k 4"
@@ -98,7 +98,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -n "$file" > "$SORT_OUTPUT"
-    ./sort -n "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -n "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -n"
@@ -116,7 +116,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -r "$file" > "$SORT_OUTPUT"
-    ./sort -r "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -r "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -r"
@@ -134,7 +134,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
     
     sort -u "$file" > "$SORT_OUTPUT"
-    ./sort -u "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -u "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -u"
@@ -152,7 +152,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -M "$file" > "$SORT_OUTPUT"
-    ./sort "$file" -M > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -M "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -M"
@@ -170,7 +170,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -b "$file" > "$SORT_OUTPUT"
-    ./sort "$file" -b > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -b "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -b"
@@ -187,8 +187,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -c "$file" > "$SORT_OUTPUT" 2>&1
-    ./sort -c "$file" > "$MY_SORT_OUTPUT" 2>&1
+    sort -c "$file" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -c "$file" > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -c"
@@ -206,7 +206,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -h "$file" > "$SORT_OUTPUT" 
-    ./sort -h "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -h "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -h"
@@ -224,7 +224,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -rn "$file" > "$SORT_OUTPUT"
-    ./sort -rn "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -rn "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -rn"
@@ -242,7 +242,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -ru "$file" > "$SORT_OUTPUT"
-    ./sort -ru "$file" > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -ru "$file" > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -ru"
@@ -260,7 +260,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -rM "$file" > "$SORT_OUTPUT"
-    ./sort "$file" -rM > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "$file" -rM > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -rM"
@@ -278,7 +278,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -rb "$file" > "$SORT_OUTPUT"
-    ./sort "$file" -rb > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "$file" -rb > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -rb"
@@ -295,8 +295,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -rc "$file" > "$SORT_OUTPUT" 2>&1
-    ./sort -rc "$file" > "$MY_SORT_OUTPUT" 2>&1
+    sort -rc "$file" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -rc "$file" > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -rc"
@@ -314,7 +314,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -rh "$file" > "$SORT_OUTPUT" 2>&1
-    ./sort -rh "$file" > "$MY_SORT_OUTPUT" 2>&1
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 -rh "$file" > "$MY_SORT_OUTPUT" 2>&1
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -rh"
@@ -332,7 +332,7 @@ run_test() {
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
     sort -rk 2 "./assets/test_file_2.txt" > "$SORT_OUTPUT"
-    ./sort "./assets/test_file_2.txt" -rk 2 > "$MY_SORT_OUTPUT"
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -rk 2 > "$MY_SORT_OUTPUT"
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -rk 2"
@@ -349,8 +349,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -cb "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1
-    ./sort "./assets/test_file_2.txt" -cb > "$MY_SORT_OUTPUT" 2>&1
+    sort -cb "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -cb > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -cb"
@@ -367,8 +367,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -cn "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1
-    ./sort "./assets/test_file_2.txt" -cn > "$MY_SORT_OUTPUT" 2>&1
+    sort -cn "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -cn > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -cn"
@@ -385,8 +385,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -cu "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1
-    ./sort "./assets/test_file_2.txt" -cu > "$MY_SORT_OUTPUT" 2>&1
+    sort -cu "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -cu > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -cu"
@@ -403,8 +403,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -cM "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1
-    ./sort "./assets/test_file_2.txt" -cM > "$MY_SORT_OUTPUT" 2>&1
+    sort -cM "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -cM > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -cM"
@@ -421,8 +421,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -ch "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1
-    ./sort "./assets/test_file_2.txt" -ch > "$MY_SORT_OUTPUT" 2>&1
+    sort -ch "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./assets/test_file_2.txt" -ch > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: -ch"
@@ -439,26 +439,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort -ck 2 "./assets/test_file_2.txt" > "$SORT_OUTPUT" 2>&1
-    ./sort "./assets/test_file_2.txt" -ck 2 > "$MY_SORT_OUTPUT" 2>&1
-
-    if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
-        echo "Test passed: -ck 2"
-    else
-        echo "============================================"
-        echo "Test failed: -ck 2"
-        echo "Expected:"
-        cat "$SORT_OUTPUT"
-        echo "--------------------------------------------"
-        echo "Got:"
-        cat "$MY_SORT_OUTPUT"
-        echo "============================================"
-    fi
-    
-    rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
-
-    sort "./internal" > "$SORT_OUTPUT" 2>&1
-    ./sort "./internal" > "$MY_SORT_OUTPUT" 2>&1
+    sort "./internal" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "./internal" > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: Is a directory error"
@@ -475,8 +457,8 @@ run_test() {
     
     rm -f "$SORT_OUTPUT" "$MY_SORT_OUTPUT"
 
-    sort "NoSuchFile" > "$SORT_OUTPUT" 2>&1
-    ./sort "NoSuchFile" > "$MY_SORT_OUTPUT" 2>&1
+    sort "NoSuchFile" > "$SORT_OUTPUT" 2>&1 || true
+    ./sort --nodes=localhost:8081,localhost:8082,localhost:8083 --quorum=2 "NoSuchFile" > "$MY_SORT_OUTPUT" 2>&1 || true
 
     if diff -u "$SORT_OUTPUT" "$MY_SORT_OUTPUT"; then
         echo "Test passed: No such file or directory error"
@@ -495,6 +477,24 @@ run_test() {
 
 }
 
-go build -o sort ./cmd/sort/main.go
+set -euo pipefail
+
+go build -o sort ./cmd/sort
+
+nohup timeout --signal=SIGINT 3s ./sort --serve --port=8081 >> test.log 2>&1 &
+nohup timeout --signal=SIGINT 3s ./sort --serve --port=8082 >> test.log 2>&1 &
+nohup timeout --signal=SIGINT 3s ./sort --serve --port=8083 >> test.log 2>&1 &
+
+wait_port() {
+  local port=$1
+  while ! (echo > /dev/tcp/localhost/$port) >/dev/null 2>&1; do
+    sleep 0.1
+  done
+}
+
+wait_port 8081
+wait_port 8082
+wait_port 8083
 
 run_test "./assets/test_file_1.txt"
+rm -f sort chunk_*

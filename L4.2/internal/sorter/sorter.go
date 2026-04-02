@@ -1,6 +1,5 @@
-// Package sorter implements an external sorting utility similar to GNU sort.
-// It supports file and standard input processing, parallel chunk sorting,
-// merging, and optional verification of sorted input.
+// Package sorter provides functions for sorting text data, either from files
+// or standard input, supporting chunked, in-memory, and optional distributed sorting.
 package sorter
 
 import (
@@ -17,6 +16,8 @@ import (
 
 	"L4.2/internal/comparator"
 	"L4.2/internal/config"
+	"L4.2/internal/master"
+
 	"L4.2/internal/flags"
 	"github.com/spf13/pflag"
 	"golang.org/x/sync/errgroup"
@@ -41,11 +42,11 @@ type Data struct {
 
 // Sort is the main entry point for the sorting process.
 // It parses input, processes chunks, performs sorting, merging, and cleanup.
-func Sort() {
+func Sort(flags *flags.Flags) {
 
-	data, err := processInput()
+	data, err := processInput(flags)
 	if err != nil {
-		logFatal(err, data.FileName)
+		LogFatal(err, data.FileName)
 	}
 
 	if !data.Flags.C {
@@ -56,26 +57,25 @@ func Sort() {
 		alive := make([]bool, len(data.Chunks))
 
 		if err := mergePrep(scnrs, files, lines, alive, data.Chunks); err != nil {
-			logFatal(err, data.FileName)
+			LogFatal(err, data.FileName)
 		}
 
 		if err := mergeSort(scnrs, lines, alive, data.Flags); err != nil {
-			logFatal(err, data.FileName)
+			LogFatal(err, data.FileName)
 		}
 
 		if err := cleanup(files, data.Chunks); err != nil {
-			logFatal(err, data.FileName)
+			LogFatal(err, data.FileName)
 		}
 
 	}
 
 }
 
-// processInput parses command-line flags and determines the data source.
-// It delegates processing to processFiles or processStdIn depending on input.
-func processInput() (*Data, error) {
+// processInput determines the input source and initializes runtime configuration.
+func processInput(f *flags.Flags) (*Data, error) {
 
-	data := &Data{Sorted: true}
+	data := &Data{Sorted: true, Flags: f}
 
 	cfg, err := config.Load()
 	if err != nil || cfg.ChunkSize < 1 {
@@ -83,12 +83,6 @@ func processInput() (*Data, error) {
 	} else {
 		data.Config = cfg
 	}
-
-	flags, err := flags.Parse()
-	if err != nil {
-		return data, fmt.Errorf("failed to parse flags: %w", err)
-	}
-	data.Flags = flags
 
 	files := pflag.Args()
 	if len(files) > 0 {
@@ -99,7 +93,6 @@ func processInput() (*Data, error) {
 }
 
 // processFiles processes one or more input files sequentially.
-// It opens each file, reads, sorts, and closes it properly.
 func processFiles(data *Data, files []string) error {
 
 	for i := range files {
@@ -108,7 +101,7 @@ func processFiles(data *Data, files []string) error {
 
 		file, err := os.Open(data.FileName)
 		if err != nil {
-			return err // intentionally not wrapped: the error is handled by logFatal, which formats it in the style of GNU sort using errors.Is checks.
+			return err // intentionally not wrapped: the error is handled by LogFatal, which formats it in the style of GNU sort using errors.Is checks.
 		}
 
 		if err = processData(data, bufio.NewScanner(file)); err != nil {
@@ -129,7 +122,7 @@ func processFiles(data *Data, files []string) error {
 func processStdIn(data *Data) error {
 
 	if err := processData(data, bufio.NewScanner(os.Stdin)); err != nil {
-		return err // intentionally not wrapped: the error is handled by logFatal, which formats it in the style of GNU sort using errors.Is checks.
+		return err // intentionally not wrapped: the error is handled by LogFatal, which formats it in the style of GNU sort using errors.Is checks.
 	}
 	return nil
 
@@ -144,7 +137,7 @@ func processData(data *Data, scanner *bufio.Scanner) error {
 		var err error
 		data.Sorted, err = comparator.CheckSorted(scanner, data.FileName, data.Flags)
 		if err != nil {
-			return err // intentionally not wrapped: the error is handled by logFatal, which formats it in the style of GNU sort using errors.Is checks.
+			return err // intentionally not wrapped: the error is handled by LogFatal, which formats it in the style of GNU sort using errors.Is checks.
 		}
 
 		if !data.Sorted {
@@ -157,8 +150,7 @@ func processData(data *Data, scanner *bufio.Scanner) error {
 
 }
 
-// splitToChunks divides input data into chunks and distributes work
-// among concurrent goroutines for processing.
+// splitToChunks divides input into chunks and distributes work among workers.
 func splitToChunks(data *Data, scanner *bufio.Scanner) error {
 
 	workers := runtime.GOMAXPROCS(data.Config.Workers)
@@ -199,30 +191,70 @@ func splitToChunks(data *Data, scanner *bufio.Scanner) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err // intentionally not wrapped: the error is handled by logFatal, which formats it in the style of GNU sort using errors.Is checks.
+		return err // intentionally not wrapped: the error is handled by LogFatal, which formats it in the style of GNU sort using errors.Is checks.
 	}
 
 	return nil
 
 }
 
-// processChunks sorts individual chunks of data and saves them into temporary files.
+// processChunks sorts individual chunks and writes them to temporary files.
 func processChunks(data *Data, chunksQueue <-chan []string, mu *sync.Mutex) error {
+
 	for chunk := range chunksQueue {
-		sortChunk(chunk, data.Flags)
-		filename, err := saveChunk(chunk)
-		if err != nil {
-			return fmt.Errorf("saving error: %w", err)
+
+		if data.Flags.Nodes != "" {
+
+			nodes := strings.Split(data.Flags.Nodes, ",")
+
+			sortedChunk, err := master.RemoteSort(chunk, nodes, data.Flags, data.Flags.Quorum)
+			if err != nil {
+				return err
+			}
+
+			filename, err := saveChunk(sortedChunk)
+			if err != nil {
+				return err
+			}
+
+			mu.Lock()
+			data.Chunks = append(data.Chunks, filename)
+			mu.Unlock()
+
+			continue
+
 		}
-		mu.Lock()
-		data.Chunks = append(data.Chunks, filename)
-		mu.Unlock()
+
+		if err := localSort(chunk, data, mu); err != nil {
+			return err
+		}
+
 	}
+
 	return nil
+
 }
 
-// sortChunk sorts a single chunk of lines using comparator and given flags.
-func sortChunk(lines []string, flags *flags.Flags) {
+// localSort sorts a chunk and writes it to a temporary file.
+func localSort(chunk []string, data *Data, mu *sync.Mutex) error {
+
+	SortChunk(chunk, data.Flags)
+
+	filename, err := saveChunk(chunk)
+	if err != nil {
+		return err
+	}
+
+	mu.Lock()
+	data.Chunks = append(data.Chunks, filename)
+	mu.Unlock()
+
+	return nil
+
+}
+
+// SortChunk sorts a slice of lines in-place according to flags.
+func SortChunk(lines []string, flags *flags.Flags) {
 
 	slices.SortStableFunc(lines, comparator.Compare(flags))
 
@@ -237,7 +269,7 @@ func sortChunk(lines []string, flags *flags.Flags) {
 
 }
 
-// saveChunk writes a sorted chunk into a temporary file and returns its name.
+// saveChunk writes sorted lines into a temporary file.
 func saveChunk(chunk []string) (fileName string, err error) {
 
 	tempFile, err := os.CreateTemp(".", "chunk_")
@@ -447,8 +479,8 @@ func deleteChunks(chunks []string) error {
 	return nil
 }
 
-// logFatal prints formatted error messages consistent with GNU sort behavior
-func logFatal(err error, fileName string) {
+// LogFatal prints formatted error messages consistent with GNU sort behavior
+func LogFatal(err error, fileName string) {
 	if pathErr, ok := err.(*os.PathError); ok {
 		switch {
 		case errors.Is(pathErr.Err, syscall.EISDIR):
