@@ -55,6 +55,10 @@ func Parse() (*Flags, error) {
 		return nil, fmt.Errorf("-k: %w", err)
 	}
 
+	if flags.Quorum < 1 {
+		return nil, fmt.Errorf("--quorum must be >= 1")
+	}
+
 	return flags, nil
 
 }

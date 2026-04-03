@@ -17,3 +17,4 @@ lint:
 
 clean:
 	@rm -f sort
+	@rm -f test.log
