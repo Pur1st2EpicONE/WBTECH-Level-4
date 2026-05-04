@@ -1,0 +1,312 @@
+definitions:
+  v1.CreateRequestV1:
+    properties:
+      date:
+        description: EventDate is the date of the event in YYYY-MM-DD format.
+        example: "2028-12-04"
+        type: string
+      text:
+        description: Text is the optional description of the event.
+        example: Touch grass
+        type: string
+      user_id:
+        description: UserID is the ID of the user who owns the event.
+        example: 1
+        type: integer
+    type: object
+  v1.CreateResponseV1:
+    properties:
+      event_id:
+        description: EventID is the unique identifier of the newly created event.
+        example: 3383503d-fb71-4b8c-85bd-a914c84252a9
+        type: string
+    type: object
+  v1.DeleteRequestV1:
+    properties:
+      event_id:
+        description: EventID is the unique identifier of the event to delete.
+        example: 3383503d-fb71-4b8c-85bd-a914c84252a9
+        type: string
+      user_id:
+        description: UserID is the ID of the user who owns the event.
+        example: 1
+        type: integer
+    required:
+    - event_id
+    - user_id
+    type: object
+  v1.DeleteResponseV1:
+    properties:
+      event_deleted:
+        description: Deleted indicates whether the event was successfully deleted.
+        example: true
+        type: boolean
+    type: object
+  v1.ErrorResponse400:
+    properties:
+      code:
+        description: Code is the HTTP status code.
+        example: 400
+        type: integer
+      message:
+        description: Message is a human-readable description of the error.
+        example: invalid date format, expected YYYY-MM-DD
+        type: string
+    type: object
+  v1.ErrorResponse500:
+    properties:
+      code:
+        description: Code is the HTTP status code.
+        example: 500
+        type: integer
+      message:
+        description: Message is a human-readable description of the error.
+        example: internal server error
+        type: string
+    type: object
+  v1.EventDtoV1:
+    properties:
+      date:
+        description: EventDate is the date of the event in YYYY-MM-DD format.
+        example: "2028-12-04"
+        type: string
+      event_id:
+        description: EventID is the unique identifier of the event.
+        example: 3383503d-fb71-4b8c-85bd-a914c84252a9
+        type: string
+      text:
+        description: Text is the description of the event.
+        example: Touch grass
+        type: string
+    type: object
+  v1.ListOfEventsResponseV1:
+    properties:
+      events:
+        description: Events is the list of events returned by the API.
+        items:
+          $ref: '#/definitions/v1.EventDtoV1'
+        type: array
+    type: object
+  v1.UpdateRequestV1:
+    properties:
+      event_id:
+        description: EventID is the unique identifier of the event to update.
+        example: 3383503d-fb71-4b8c-85bd-a914c84252a9
+        type: string
+      new_date:
+        description: NewDate is the new optional date for the event in YYYY-MM-DD
+          format.
+        example: "2028-12-05"
+        type: string
+      text:
+        description: Text is the new optional description for the event.
+        example: Grind leetcode
+        type: string
+      user_id:
+        description: UserID is the ID of the user who owns the event.
+        example: 1
+        type: integer
+    type: object
+  v1.UpdateResponseV1:
+    properties:
+      event_updated:
+        description: Updated indicates whether the event was successfully updated.
+        example: true
+        type: boolean
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/create_event:
+    post:
+      consumes:
+      - application/json
+      description: Creates an event for a user
+      parameters:
+      - description: Event data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateRequestV1'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.CreateResponseV1'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse400'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse500'
+      summary: Create a new event
+      tags:
+      - events
+  /api/v1/delete_event:
+    post:
+      consumes:
+      - application/json
+      description: Deletes an event for a user by ID
+      parameters:
+      - description: Event delete data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.DeleteRequestV1'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.DeleteResponseV1'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse400'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse500'
+      summary: Delete an event
+      tags:
+      - events
+  /api/v1/events_for_day:
+    get:
+      consumes:
+      - application/json
+      description: Returns all events for a given day for a user
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      - description: Date in YYYY-MM-DD format
+        in: query
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.ListOfEventsResponseV1'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse400'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse500'
+      summary: Get events for a day
+      tags:
+      - events
+  /api/v1/events_for_month:
+    get:
+      consumes:
+      - application/json
+      description: Returns all events for a given month for a user
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      - description: Date in YYYY-MM-DD format
+        in: query
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.ListOfEventsResponseV1'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse400'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse500'
+      summary: Get events for a month
+      tags:
+      - events
+  /api/v1/events_for_week:
+    get:
+      consumes:
+      - application/json
+      description: Returns all events for a given week for a user
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      - description: Date in YYYY-MM-DD format
+        in: query
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.ListOfEventsResponseV1'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse400'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse500'
+      summary: Get events for a week
+      tags:
+      - events
+  /api/v1/update_event:
+    post:
+      consumes:
+      - application/json
+      description: Updates an event's text or date
+      parameters:
+      - description: Event update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateRequestV1'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.UpdateResponseV1'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse400'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse500'
+      summary: Update an existing event
+      tags:
+      - events
+swagger: "2.0"
