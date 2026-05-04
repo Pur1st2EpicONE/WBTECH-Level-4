@@ -28,5 +28,13 @@ type Meta struct {
 
 // Data contains the actual content of the event.
 type Data struct {
-	Text string // Text description of the event
+	Text     string // Text description of the event
+	Reminder time.Duration
+}
+
+type Reminder struct {
+	EventID  string
+	UserID   int
+	RemindAt time.Time
+	Text     string
 }

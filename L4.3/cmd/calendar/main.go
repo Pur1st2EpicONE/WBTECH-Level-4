@@ -4,8 +4,7 @@
 package main
 
 import (
-	_ "L2.18/api/openapi-spec/docs"
-	"L2.18/internal/app"
+	"L4.3/internal/app"
 )
 
 // main is the entry point of the application.

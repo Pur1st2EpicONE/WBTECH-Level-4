@@ -3,45 +3,64 @@
 package repository
 
 import (
+	"fmt"
+	"time"
+
 	"L4.3/internal/config"
 	"L4.3/internal/models"
 	"L4.3/internal/repository/memory"
+	"L4.3/internal/repository/postgres"
 	"L4.3/pkg/logger"
+	"github.com/wb-go/wbf/dbpg"
 )
 
-// Storage defines the interface for interacting with the application's
-// persistent or in-memory storage layer.
-type Storage interface {
-	// CreateEvent stores a new event and returns its unique ID.
-	CreateEvent(event *models.Event) (string, error)
-
-	// UpdateEvent updates an existing event identified by its ID.
-	UpdateEvent(event *models.Event) error
-
-	// DeleteEvent removes an event based on metadata (user ID + event ID).
-	DeleteEvent(meta *models.Meta) error
-
-	// GetEventByID retrieves an event by its unique ID.
-	// Returns nil if no event is found.
-	GetEventByID(eventID string) *models.Event
-
-	// CountUserEvents returns the number of events associated with a user.
-	CountUserEvents(userID int) (int, error)
-
-	// GetEvents retrieves all events for a user filtered by a given period
-	// (day, week, month).
-	GetEvents(meta *models.Meta, period models.Period) ([]models.Event, error)
-
-	// Close cleans up any resources held by the storage.
+type Archive interface {
+	SaveEvents(events []models.Event) error
 	Close()
 }
 
-// NewStorage creates a new Storage instance. If db is nil, it returns
-// an in-memory implementation. Panics if an unsupported storage type is provided.
-func NewStorage(db any, config config.Storage, logger logger.Logger) Storage {
-	if db == nil {
-		return memory.NewStorage(config, logger)
-	} else {
-		panic("unsupported storage type")
+type Memory interface {
+	CreateEvent(event *models.Event) (string, error)
+	UpdateEvent(event *models.Event) error
+	DeleteEvent(meta *models.Meta) error
+	DeleteEvents(ids []string) error
+	GetEventByID(eventID string) *models.Event
+	CountUserEvents(userID int) (int, error)
+	GetEvents(meta *models.Meta, period models.Period) ([]models.Event, error)
+	GetExpiredEvents(before time.Time) ([]models.Event, error)
+	Close()
+}
+
+type Storage struct {
+	Archive Archive
+	Memory  Memory
+}
+
+func NewStorage(logger logger.Logger, config config.Storage, db *dbpg.DB) *Storage {
+	return &Storage{
+		Archive: postgres.NewStorage(logger, config, db),
+		Memory:  memory.NewStorage(config, logger),
 	}
+}
+
+func ConnectDB(config config.Storage) (*dbpg.DB, error) {
+
+	options := &dbpg.Options{
+		MaxOpenConns:    config.MaxOpenConns,
+		MaxIdleConns:    config.MaxIdleConns,
+		ConnMaxLifetime: config.ConnMaxLifetime,
+	}
+
+	db, err := dbpg.New(fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.Host, config.Port, config.Username, config.Password, config.DBName, config.SSLMode), nil, options)
+	if err != nil {
+		return nil, fmt.Errorf("database driver not found or DSN invalid: %w", err)
+	}
+
+	if err := db.Master.Ping(); err != nil {
+		return nil, fmt.Errorf("database ping failed: %w", err)
+	}
+
+	return db, nil
+
 }

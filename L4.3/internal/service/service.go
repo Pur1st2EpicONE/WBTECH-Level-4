@@ -34,6 +34,6 @@ type Service interface {
 // NewService creates a new Service implementation using the provided configuration,
 // repository storage, and logger. The returned Service implements all event management
 // operations defined in the Service interface.
-func NewService(config config.Service, storage repository.Storage, logger logger.Logger) Service {
+func NewService(config config.Service, storage *repository.Storage, logger logger.Logger) Service {
 	return impl.NewService(config, storage, logger)
 }

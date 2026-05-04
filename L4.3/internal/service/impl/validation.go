@@ -18,6 +18,10 @@ func validateCreate(event *models.Event) error {
 		return errs.ErrInvalidUserID
 	}
 
+	// if event.Data.Reminder < 0 {
+	// 	event.Data.Reminder = 0
+	// }
+
 	if err := validateDate(event.Meta.EventDate); err != nil {
 		return err
 	}

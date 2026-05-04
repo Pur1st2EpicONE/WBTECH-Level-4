@@ -273,6 +273,64 @@ func (s *Storage) getEventsForMonth(allUserEvents map[string][]*models.Event, me
 
 }
 
+func (s *Storage) GetExpiredEvents(before time.Time) ([]models.Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var res []models.Event
+	for _, userEvents := range s.db {
+		for _, dayEvents := range userEvents {
+			for _, e := range dayEvents {
+				fmt.Println(before)
+				fmt.Println(e.Meta.EventDate)
+				if e.Meta.EventDate.Before(before) {
+					res = append(res, *e)
+				}
+			}
+		}
+	}
+	return res, nil
+}
+
+func (s *Storage) DeleteEvents(ids []string) error {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, id := range ids {
+
+		event, ok := s.eventsByID[id]
+		if !ok {
+			continue
+		}
+
+		userID := event.Meta.UserID
+		date := format(event.Meta.EventDate)
+
+		dayEvents := s.db[userID][date]
+
+		for i, e := range dayEvents {
+			if e.Meta.EventID == id {
+				copy(dayEvents[i:], dayEvents[i+1:])
+				dayEvents[len(dayEvents)-1] = nil
+				dayEvents = dayEvents[:len(dayEvents)-1]
+				break
+			}
+		}
+
+		if len(dayEvents) == 0 {
+			delete(s.db[userID], date)
+		} else {
+			s.db[userID][date] = dayEvents
+		}
+
+		delete(s.eventsByID, id)
+		s.userEventCount[userID]--
+	}
+
+	return nil
+
+}
+
 // Close clears all in-memory data and logs the shutdown.
 func (s *Storage) Close() {
 

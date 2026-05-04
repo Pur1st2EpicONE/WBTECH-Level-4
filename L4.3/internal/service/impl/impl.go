@@ -5,6 +5,7 @@ package impl
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"L4.3/internal/config"
 	"L4.3/internal/errs"
@@ -17,15 +18,25 @@ import (
 // It interacts with the repository layer to perform CRUD operations on events
 // and enforces business rules such as user limits and validation checks.
 type Service struct {
-	Storage          repository.Storage // underlying storage for events
-	logger           logger.Logger      // logger for service-level logging
-	maxEventsPerUser int                // maximum number of events allowed per user
+	Storage          *repository.Storage
+	logger           logger.Logger
+	maxEventsPerUser int
+	reminderCh       chan models.Reminder
+	stopCh           chan struct{}
 }
 
 // NewService creates a new Service instance with the provided configuration, storage, and logger.
 // The maxEventsPerUser field is set from the configuration and enforces limits on event creation.
-func NewService(config config.Service, storage repository.Storage, logger logger.Logger) *Service {
-	return &Service{Storage: storage, logger: logger, maxEventsPerUser: config.MaxEventsPerUser}
+func NewService(config config.Service, storage *repository.Storage, logger logger.Logger) *Service {
+	s := &Service{
+		Storage:          storage,
+		logger:           logger,
+		maxEventsPerUser: config.MaxEventsPerUser,
+		reminderCh:       make(chan models.Reminder, 100),
+		stopCh:           make(chan struct{}),
+	}
+	go s.reminderWorker()
+	return s
 }
 
 // CreateEvent validates and creates a new event for a user.
@@ -37,7 +48,7 @@ func (s *Service) CreateEvent(event *models.Event) (string, error) {
 		return "", err
 	}
 
-	count, err := s.Storage.CountUserEvents(event.Meta.UserID)
+	count, err := s.Storage.Memory.CountUserEvents(event.Meta.UserID)
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +59,24 @@ func (s *Service) CreateEvent(event *models.Event) (string, error) {
 		return "", errs.ErrMaxEvents
 	}
 
-	return s.Storage.CreateEvent(event)
+	id, err := s.Storage.Memory.CreateEvent(event)
+	if err != nil {
+		return "", err
+	}
+
+	if event.Data.Reminder > 0 {
+		remindAt := event.Meta.EventDate.Add(-event.Data.Reminder)
+		if remindAt.After(time.Now()) {
+			s.reminderCh <- models.Reminder{
+				EventID:  id,
+				UserID:   event.Meta.UserID,
+				RemindAt: remindAt,
+				Text:     event.Data.Text,
+			}
+		}
+	}
+
+	return id, nil
 
 }
 
@@ -60,11 +88,11 @@ func (s *Service) UpdateEvent(event *models.Event) error {
 		return err
 	}
 
-	if err := validateUpdate(event, s.Storage.GetEventByID(event.Meta.EventID)); err != nil {
+	if err := validateUpdate(event, s.Storage.Memory.GetEventByID(event.Meta.EventID)); err != nil {
 		return err
 	}
 
-	return s.Storage.UpdateEvent(event)
+	return s.Storage.Memory.UpdateEvent(event)
 
 }
 
@@ -76,11 +104,11 @@ func (s *Service) DeleteEvent(meta *models.Meta) error {
 		return err
 	}
 
-	if err := validateDelete(meta, s.Storage.GetEventByID(meta.EventID)); err != nil {
+	if err := validateDelete(meta, s.Storage.Memory.GetEventByID(meta.EventID)); err != nil {
 		return err
 	}
 
-	return s.Storage.DeleteEvent(meta)
+	return s.Storage.Memory.DeleteEvent(meta)
 
 }
 
@@ -93,7 +121,7 @@ func (s *Service) GetEvents(meta *models.Meta, period models.Period) ([]models.E
 		return nil, err
 	}
 
-	events, err := s.Storage.GetEvents(meta, period)
+	events, err := s.Storage.Memory.GetEvents(meta, period)
 	if err != nil {
 		return nil, err
 	}

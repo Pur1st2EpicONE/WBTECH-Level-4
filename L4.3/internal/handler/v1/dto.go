@@ -5,6 +5,7 @@ type CreateRequestV1 struct {
 	UserID    int    `json:"user_id" example:"1"`                  // UserID is the ID of the user who owns the event.
 	EventDate string `json:"date" example:"2028-12-04"`            // EventDate is the date of the event in YYYY-MM-DD format.
 	Text      string `json:"text,omitempty" example:"Touch grass"` // Text is the optional description of the event.
+	Reminder  int    `json:"reminder,omitempty" example:"30"`
 }
 
 // CreateResponseV1 represents the response returned after creating an event.
