@@ -20,7 +20,7 @@ func (s *Storage) SaveEvents(events []models.Event) error {
 
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 	}()
 
@@ -62,7 +62,7 @@ func (s *Storage) SaveEvents(events []models.Event) error {
 		return fmt.Errorf("commit tx: %w", err)
 	}
 
-	s.logger.Debug("archived events saved", "count", len(events), "layer", "repository.postgres")
+	s.logger.Debug("events saved to archive", "count", len(events), "layer", "repository.postgres")
 
 	return nil
 

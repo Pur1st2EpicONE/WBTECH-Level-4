@@ -65,6 +65,7 @@ type RetryStrategy struct {
 }
 
 func Load() (Config, error) {
+
 	cfg := wbf.New()
 
 	if err := cfg.LoadConfigFiles("./config.yaml"); err != nil {
@@ -84,6 +85,7 @@ func Load() (Config, error) {
 	loadEnvs(&conf)
 
 	return conf, nil
+
 }
 
 func loadEnvs(conf *Config) {

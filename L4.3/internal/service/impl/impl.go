@@ -3,12 +3,7 @@
 package impl
 
 import (
-	"fmt"
-	"sort"
-	"time"
-
 	"L4.3/internal/config"
-	"L4.3/internal/errs"
 	"L4.3/internal/models"
 	"L4.3/internal/repository"
 	"L4.3/pkg/logger"
@@ -28,6 +23,7 @@ type Service struct {
 // NewService creates a new Service instance with the provided configuration, storage, and logger.
 // The maxEventsPerUser field is set from the configuration and enforces limits on event creation.
 func NewService(config config.Service, storage *repository.Storage, logger logger.Logger) *Service {
+
 	s := &Service{
 		Storage:          storage,
 		logger:           logger,
@@ -35,101 +31,9 @@ func NewService(config config.Service, storage *repository.Storage, logger logge
 		reminderCh:       make(chan models.Reminder, 100),
 		stopCh:           make(chan struct{}),
 	}
+
 	go s.reminderWorker()
+
 	return s
-}
-
-// CreateEvent validates and creates a new event for a user.
-// Returns the generated event ID on success, or an error if creation fails.
-// It enforces per-user limits and validates the event data before calling the repository.
-func (s *Service) CreateEvent(event *models.Event) (string, error) {
-
-	if err := validateCreate(event); err != nil {
-		return "", err
-	}
-
-	count, err := s.Storage.Memory.CountUserEvents(event.Meta.UserID)
-	if err != nil {
-		return "", err
-	}
-
-	s.logger.Debug(fmt.Sprintf("service — user %d has %d remaining event slots", event.Meta.UserID, s.maxEventsPerUser-count), "UserID", event.Meta.UserID, "layer", "service.impl")
-
-	if count >= s.maxEventsPerUser {
-		return "", errs.ErrMaxEvents
-	}
-
-	id, err := s.Storage.Memory.CreateEvent(event)
-	if err != nil {
-		return "", err
-	}
-
-	if event.Data.Reminder > 0 {
-		remindAt := event.Meta.EventDate.Add(-event.Data.Reminder)
-		if remindAt.After(time.Now()) {
-			s.reminderCh <- models.Reminder{
-				EventID:  id,
-				UserID:   event.Meta.UserID,
-				RemindAt: remindAt,
-				Text:     event.Data.Text,
-			}
-		}
-	}
-
-	return id, nil
-
-}
-
-// UpdateEvent validates and updates an existing event.
-// Returns an error if validation fails, the event does not exist, or the update cannot be applied.
-func (s *Service) UpdateEvent(event *models.Event) error {
-
-	if err := validateIDs(event.Meta.UserID, event.Meta.EventID); err != nil {
-		return err
-	}
-
-	if err := validateUpdate(event, s.Storage.Memory.GetEventByID(event.Meta.EventID)); err != nil {
-		return err
-	}
-
-	return s.Storage.Memory.UpdateEvent(event)
-
-}
-
-// DeleteEvent validates and deletes an event identified by the provided metadata.
-// Returns an error if validation fails or the event cannot be deleted.
-func (s *Service) DeleteEvent(meta *models.Meta) error {
-
-	if err := validateIDs(meta.UserID, meta.EventID); err != nil {
-		return err
-	}
-
-	if err := validateDelete(meta, s.Storage.Memory.GetEventByID(meta.EventID)); err != nil {
-		return err
-	}
-
-	return s.Storage.Memory.DeleteEvent(meta)
-
-}
-
-// GetEvents retrieves all events for a user within the specified period (day, week, month).
-// Events are returned in descending order by date. Returns an error if validation fails
-// or if the repository fails to fetch events.
-func (s *Service) GetEvents(meta *models.Meta, period models.Period) ([]models.Event, error) {
-
-	if err := validateGet(meta); err != nil {
-		return nil, err
-	}
-
-	events, err := s.Storage.Memory.GetEvents(meta, period)
-	if err != nil {
-		return nil, err
-	}
-
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Meta.EventDate.After(events[j].Meta.EventDate)
-	})
-
-	return events, nil
 
 }

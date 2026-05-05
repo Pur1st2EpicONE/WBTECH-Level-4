@@ -1,72 +1,74 @@
-## L2.18
+## L4.3
 
 ![calendar banner](assets/banner.png)
 
-<h3 align="center">A simple event calendar service written in Go, featuring REST API, structured logging, graceful shutdown, modular architecture, and Swagger documentation.</h3> <br>
-
-<br>
-
-## Architecture
-
-The system is built with clean layered architecture:
-
-* App layer — lifecycle management, initialization, shutdown.
-
-* HTTP layer — Gin handlers, routing, middleware.
-
-* Service layer — business logic and validation.
-
-* Repository layer — in-memory storage with support for CRUD operations.
-
-The server supports graceful shutdown, request logging, UUID-based event IDs, and Swagger UI for API exploration.
-
-<br>
-
-## Cool features
-
-### Fully interface-driven architecture
-
-All core components — server, handler, service, repository, logger — interact via interfaces, enabling easy mocking, dependency injection, and strict layer isolation.
-
-### Versioned API (v1 and beyond)
-
-REST API is fully versioned (/api/v1/...) with clear separation of versions and zero shared state, allowing backward-compatible evolution.
-
-### Request logging middleware with latency, request IDs & full context
-
-Captures latency, request IDs, client info, query strings, protocol, and Gin errors for full observability.
-
-### Extensive multi-layer validation
-
-Validation occurs at every stage, from JSON parsing and semantic checks in handlers to business rules in service and consistency enforcement in storage.
-
-### High-performance in-memory storage
-
-Efficient, size-controlled repository with hierarchical userID → date → events mapping, auxiliary lookup maps for O(1) access, preallocated maps, zero-copy updates, and thread safety via RWMutex.
-
-### Production-ready codebase with 100% test coverage
-
-Handler, service, and repository layers are fully tested, covering all parsing, validation, business rules, repository operations, error handling, and update/no-update scenarios.
+<h3 align="center">A simple event calendar service written in Go, featuring a background worker for reminders via channels, asynchronous logging, and periodic cleanup of old events.</h3> <br>
 
 <br>
 
 ## Installation
-⚠️ Prerequisite: Go 1.25.1
+⚠️ Note: This project requires Docker Compose, regardless of how you choose to run it.  
 
-Optionally, edit [the config file](config.yaml) to customize your preferences, then build and run the project using the Makefile command:
-
+#### 1. Run everything in containers
 ```bash
 make
 ```
-The server will start, run in foreground mode, and gracefully shut down upon receiving a SIGINT.
 
-After that, you can use:
+This will start the entire project fully containerized using Docker Compose.
+
+#### 2. Run Calendar locally
+```bash
+make local
+```
+In this mode, only PostgreSQL is started in container via Docker Compose, while the application itself runs locally.
+
+⚠️ Note: Local mode requires Go 1.25.1 installed on your machine.
+
+<br>
+
+## Configuration
+
+### Runtime configuration
+
+Calendar uses two configuration files, depending on the selected run mode:
+
+[config.full.yaml](./configs/config.full.yaml) — used for the fully containerized setup
+
+[config.dev.yaml](./configs/config.dev.yaml) — used for local development
+
+You may optionally review and adjust the corresponding configuration file to match your preferences. The default values are suitable for most use cases.
+
+### Environment variables and notification credentials
+
+Calendar uses a .env file for runtime configuration. You may create your own .env file manually before running the service, or edit [.env.example](.env.example) and let it be copied automatically on startup.
+If environment file does not exist, .env.example is copied to create it. If environment file already exists, it is used as-is and will not be overwritten.
+
+⚠️ Note: Keep .env.example for local runs. Some Makefile commands rely on it and may break if it's missing.
+
+<br>
+
+## Shutting down
+
+Stopping Calendar depends on how it was started:
+
+- Local setup — press Ctrl+C to send SIGINT to the application. The service will gracefully close connections and finish any in-progress operations.  
+- Full Docker setup — containers run by Docker Compose will be stopped automatically.
+
+In both cases, to stop all services and clean up containers, run:
 
 ```bash
-make clean
+make down
 ```
 
-to remove the application executable and the logs directory.
+⚠️ Note: In the full Docker setup, the log folder is created by the container as root and will not be removed automatically. To delete it manually, run:
+```bash
+sudo rm -rf <log-folder>
+```
+
+⚠️ Note: Docker Compose also creates a persistent volume for PostgreSQL data (l43_postgres_data). This volume is not removed automatically when containers are stopped. To remove it and fully reset the environment, run:
+```bash
+make reset
+```
 
 <br>
 
@@ -81,14 +83,169 @@ make lint        # Linting checks
 
 <br>
 
-## Documentation
+## Request examples
 
-API documentation with examples is available via Swagger UI at:
+⚠️ Note: When the service is running, a web-based UI is available at http://localhost:8080. The examples below demonstrate how to interact with the API directly using curl.
 
-```bash
-http://localhost:<port>/swagger/index.html
+All responses are wrapped in a result field on success:
+
+``` json
+{
+  "result": ...
+}
 ```
 
-Replace \<port> with the HTTP port configured in [config.yaml](config.yaml)
+Errors are returned in the form:
 
-You can explore all endpoints, view request/response schemas, and try out the API directly from the browser.
+``` json
+{
+  "error": "..."
+}
+```
+
+### Create an event
+
+``` bash
+curl -X POST http://localhost:8080/api/v1/create_event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "date": "2028-12-04",
+    "text": "Touch grass",
+    "reminder": 30
+  }'
+```
+
+### Response
+
+``` json
+{
+  "result": {
+    "event_id": "3383503d-fb71-4b8c-85bd-a914c84252a9"
+  }
+}
+```
+
+### Update an event
+
+``` bash
+curl -X POST http://localhost:8080/api/v1/update_event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "event_id": "3383503d-fb71-4b8c-85bd-a914c84252a9",
+    "text": "Grind leetcode",
+    "new_date": "2028-12-05"
+  }'
+```
+
+### Response
+
+``` json
+{
+  "result": {
+    "event_updated": true
+  }
+}
+```
+
+### Delete an event
+
+``` bash
+curl -X POST http://localhost:8080/api/v1/delete_event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "event_id": "3383503d-fb71-4b8c-85bd-a914c84252a9"
+  }'
+```
+
+### Response
+
+``` json
+{
+  "result": {
+    "event_deleted": true
+  }
+}
+```
+
+### Get events for a day
+
+``` bash
+curl "http://localhost:8080/api/v1/events_for_day?user_id=1&date=2028-12-04"
+```
+
+### Response
+
+``` json
+{
+  "result": {
+    "events": [
+      {
+        "text": "Touch grass",
+        "date": "2028-12-04",
+        "event_id": "3383503d-fb71-4b8c-85bd-a914c84252a9"
+      }
+    ]
+  }
+}
+```
+
+### Get events for a week
+
+``` bash
+curl "http://localhost:8080/api/v1/events_for_week?user_id=1&date=2028-12-04"
+```
+
+### Response
+
+``` json
+{
+  "result": {
+    "events": [
+      {
+        "text": "Touch grass",
+        "date": "2028-12-04",
+        "event_id": "3383503d-fb71-4b8c-85bd-a914c84252a9"
+      }
+    ]
+  }
+}
+```
+
+### Get events for a month
+
+``` bash
+curl "http://localhost:8080/api/v1/events_for_month?user_id=1&date=2028-12-04"
+```
+
+### Response
+
+``` json
+{
+  "result": {
+    "events": [
+      {
+        "text": "Touch grass",
+        "date": "2028-12-04",
+        "event_id": "3383503d-fb71-4b8c-85bd-a914c84252a9"
+      }
+    ]
+  }
+}
+```
+
+### Example of a bad request
+
+``` bash
+curl "http://localhost:8080/api/v1/events_for_day?user_id=1&date=invalid-date"
+```
+
+### Response
+
+``` json
+{
+  "error": "invalid date format, expected YYYY-MM-DD"
+}
+```

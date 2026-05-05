@@ -5,13 +5,16 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"text/template"
 	"time"
 
+	"L4.3/internal/errs"
 	v1 "L4.3/internal/handler/v1"
 	"L4.3/internal/service"
 	"L4.3/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/wb-go/wbf/ginext"
 )
 
 func NewHandler(service service.Service, logger logger.Logger) http.Handler {
@@ -20,6 +23,7 @@ func NewHandler(service service.Service, logger logger.Logger) http.Handler {
 
 	handler.Use(gin.Recovery())
 	handler.Use(middleware(logger))
+	handler.Static("/static", "./web/static")
 
 	apiV1 := handler.Group("/api/v1")
 	handlerV1 := v1.NewHandler(service, logger)
@@ -31,6 +35,8 @@ func NewHandler(service service.Service, logger logger.Logger) http.Handler {
 	apiV1.GET("/events_for_day", handlerV1.GetEventsDay)
 	apiV1.GET("/events_for_week", handlerV1.GetEventsWeek)
 	apiV1.GET("/events_for_month", handlerV1.GetEventsMonth)
+
+	handler.GET("/", renderPage(template.Must(template.ParseFiles("web/templates/index.html"))))
 
 	return handler
 
@@ -80,4 +86,13 @@ func middleware(logger logger.Logger) gin.HandlerFunc {
 
 	}
 
+}
+
+func renderPage(tmpl *template.Template) gin.HandlerFunc {
+	return func(c *ginext.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.Execute(c.Writer, nil); err != nil {
+			c.String(http.StatusInternalServerError, errs.ErrInternal.Error())
+		}
+	}
 }

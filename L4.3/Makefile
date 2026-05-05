@@ -1,12 +1,37 @@
-.PHONY: all L4.3 clean test lint
+.PHONY: all up down reset migrate-up migrate-down local lint test postgres app_logs postgres_logs .env .env.example help
+.POSIX:
+.SILENT:
 
 -include .env.example .env
 
-all: L4.3
+GOOSE_CMD = goose -dir ./migrations postgres "user=${DB_USER} password=${DB_PASSWORD} dbname=calendar-db host=localhost port=5433 sslmode=disable"
 
-L4.3:
-	@go build -o calendar ./cmd/calendar/main.go
-	@./calendar
+all: up
+
+up:	
+	if [ ! -f .env ] && [ ! -f .env.example ]; then \
+		echo "Missing environment file: .env or .env.example is required."; \
+		exit 1; \
+	fi
+	if [ ! -f .env ]; then cat .env.example > .env; fi
+	if [ ! -f config.yaml ]; then cp ./configs/config.full.yaml ./config.yaml; fi
+	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.full.yaml ./docker-compose.yaml; fi
+	if [ ! -f Dockerfile ]; then cp ./deployments/Dockerfile ./Dockerfile; fi
+	COMPOSE_BAKE=true docker compose up -d
+	rm -f Dockerfile
+
+down:
+	docker compose down 2>/dev/null || true 
+	rm -f Dockerfile docker-compose.yaml config.yaml
+
+reset:
+	docker volume rm l43_postgres_data
+
+migrate-up:
+	@if command -v goose > /dev/null 2>&1; then $(GOOSE_CMD) up; else echo "You need Goose migration tool to use this command!"; fi
+
+migrate-down:
+	@if command -v goose > /dev/null 2>&1; then $(GOOSE_CMD) down; else echo "You need Goose migration tool to use this command!"; fi
 
 local:
 	if [ ! -f .env ]; then cat .env.example > .env; fi 
@@ -16,21 +41,41 @@ local:
 	until docker exec postgres pg_isready -U ${DB_USER} > /dev/null 2>&1; do sleep 1; done
 	bash -c 'trap "exit 0" INT; go run ./cmd/calendar/main.go'
 
-down:
-	docker compose down 2>/dev/null || true 
-	rm -f Dockerfile docker-compose.yaml config.yaml
-
-clean:
-	@rm -f ./calendar
-	@rm -rf ./logs
+lint:
+	golangci-lint run ./...
 
 test: 
 	@go test ./internal/handler/v1 -cover
 	@go test ./internal/service/impl -cover
 	@go test ./internal/repository/memory -cover 
 
-lint:
-	golangci-lint run ./...
+postgres:
+	docker compose exec postgres psql -U ${DB_USER} -d calendar-db
+
+app_logs:
+	docker compose logs --tail 10 app
+
+postgres_logs:
+	docker compose logs --tail 10 postgres
 
 .env:
 	@:
+
+help:
+	@echo " ———————————————————————————————————————————————————————————————————————————————————— "
+	@echo "| up             | Start all services (postgres, app) in background                  |"
+	@echo "| down           | Stop and remove all containers, networks, and temporary files     |"
+	@echo "| reset          | Remove postgres Docker volume                                     |"
+	@echo "| migrate-up     | Apply all database migrations (Goose migration tool required)     |"
+	@echo "| migrate-down   | Rollback all database migrations (Goose migration tool required)  |"
+	@echo "| local          | Start local dev environment (go 1.25.1 required)                  |"
+	@echo "| lint           | Run golangci-lint                                                 |"
+	@echo "| test           | Run unit tests                                                    |"
+	@echo "| postgres       | Open psql shell inside postgres container                         |"
+	@echo "| app_logs       | Show last 10 lines of app logs                                    |"
+	@echo "| postgres_logs  | Show last 10 lines of postgres logs                               |"
+	@echo " ———————————————————————————————————————————————————————————————————————————————————— "
+
+.DEFAULT:
+	@echo " No rule to make target '$@'. Available make targets:"
+	@$(MAKE) --no-print-directory help

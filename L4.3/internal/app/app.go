@@ -137,9 +137,13 @@ func (a *App) Run() {
 }
 
 func (a *App) Stop() {
+
 	a.archiver.Stop()
 	a.server.Shutdown()
+
 	a.storage.Memory.Close()
 	a.storage.Archive.Close()
+
 	a.logger.Close()
+
 }
