@@ -22,6 +22,9 @@ reset:
 lint:
 	@golangci-lint run ./...
 
+test: 
+	@go test ./internal/handler -cover
+
 help:
 	@echo " ———————————————————————————————————————————————————————————— "
 	@echo "| up             | Build and run the profiler                |"
@@ -29,6 +32,7 @@ help:
 	@echo "| monitoring-down| Stop monitoring stack                     |"
 	@echo "| reset          | Remove binary, containers and logs        |"
 	@echo "| lint           | Run golangci-lint                         |"
+	@echo "| test           | Run unit tests                            |"
 	@echo " ———————————————————————————————————————————————————————————— "
 
 .DEFAULT:

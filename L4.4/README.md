@@ -41,7 +41,7 @@ make
 
 This builds and runs the profiler server. The terminal will be blocked while it is running.
 
-#### Terminal 2 — start monitoring stack
+#### Terminal 2 — start monitoring stack (optional)
 
 ```bash
 make monitoring-up
