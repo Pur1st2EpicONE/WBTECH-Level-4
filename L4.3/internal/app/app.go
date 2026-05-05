@@ -1,8 +1,8 @@
-// Package app defines the main application structure and lifecycle management.
+// Package app defines the main application composition root and lifecycle management.
 //
-// It handles application initialization, context and signal management, server startup,
-// graceful shutdown, and resource cleanup. The App struct encapsulates all components
-// required to run the calendar service, including logger, server, storage, and context.
+// It is responsible for bootstrapping all core components (configuration, logger,
+// database, storage, services, HTTP server), wiring dependencies, handling OS signals,
+// and coordinating graceful shutdown.
 package app
 
 import (
@@ -27,17 +27,20 @@ import (
 	"github.com/wb-go/wbf/dbpg"
 )
 
-// App represents the main application instance, managing its components and lifecycle.
+const archiveInterval = 10 * time.Minute
+
+// App represents the root application container.
 type App struct {
-	logger   logger.Logger // Structured logger used throughout the application for info, warning, error, and debug logs
-	server   server.Server // HTTP server instance that handles incoming requests
-	storage  *repository.Storage
-	ctx      context.Context    // Context used for cancellation and graceful shutdown
-	cancel   context.CancelFunc // Function to cancel the application context and trigger shutdown
-	wg       *sync.WaitGroup    // WaitGroup to synchronize goroutines during server run and shutdown
-	archiver *Archiver
+	logger   logger.Logger       // structured application logger
+	server   server.Server       // HTTP server handling incoming requests
+	storage  *repository.Storage // data access layer (memory + archive)
+	ctx      context.Context     // root context for cancellation
+	cancel   context.CancelFunc  // cancels root context
+	wg       *sync.WaitGroup     // coordinates goroutines lifecycle
+	archiver *Archiver           // background archiving worker
 }
 
+// Boot initializes the application and wires all dependencies.
 func Boot() *App {
 
 	config, err := config.Load()
@@ -53,7 +56,7 @@ func Boot() *App {
 	}
 
 	server, storage := wireApp(db, config.App, logger)
-	archiver := NewArchiver(storage, logger, 10*time.Second)
+	archiver := NewArchiver(storage, logger, archiveInterval)
 
 	ctx, cancel := newContext(logger)
 	wg := new(sync.WaitGroup)
@@ -70,6 +73,7 @@ func Boot() *App {
 
 }
 
+// bootstrapDB establishes database connection and applies migrations.
 func bootstrapDB(logger logger.Logger, config config.Storage) (*dbpg.DB, error) {
 
 	db, err := repository.ConnectDB(config)
@@ -93,6 +97,7 @@ func bootstrapDB(logger logger.Logger, config config.Storage) (*dbpg.DB, error) 
 
 }
 
+// wireApp constructs and wires core application layers.
 func wireApp(db *dbpg.DB, config config.App, logger logger.Logger) (server.Server, *repository.Storage) {
 	storage := repository.NewStorage(logger, config.Storage, db)
 	service := service.NewService(config.Service, storage, logger)
@@ -101,6 +106,7 @@ func wireApp(db *dbpg.DB, config config.App, logger logger.Logger) (server.Serve
 	return server, storage
 }
 
+// newContext creates a root context that is canceled on OS termination signals.
 func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
 
 	sigCh := make(chan os.Signal, 1)
@@ -117,6 +123,7 @@ func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
 
 }
 
+// Run starts the application components and blocks until shutdown.
 func (a *App) Run() {
 
 	a.wg.Go(func() {
@@ -136,6 +143,7 @@ func (a *App) Run() {
 
 }
 
+// Stop gracefully shuts down all application components.
 func (a *App) Stop() {
 
 	a.archiver.Stop()

@@ -7,6 +7,10 @@ import (
 	"L4.3/internal/models"
 )
 
+// reminderWorker is a background goroutine responsible for processing reminders.
+//
+// It maintains an in-memory schedule of reminder jobs and periodically checks
+// whether they are due.
 func (s *Service) reminderWorker() {
 
 	ticker := time.NewTicker(1 * time.Second)

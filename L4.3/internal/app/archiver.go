@@ -7,13 +7,26 @@ import (
 	"L4.3/pkg/logger"
 )
 
+// Archiver is a background worker responsible for moving expired events
+// from primary (memory) storage to archive storage.
+//
+// It runs periodically using a ticker and performs a batch archive operation:
+//  1. fetch expired events
+//  2. persist them to archive storage
+//  3. delete them from primary storage
+//
+// The worker is designed to be run in a separate goroutine.
 type Archiver struct {
-	storage *repository.Storage
-	logger  logger.Logger
-	ticker  *time.Ticker
-	stop    chan struct{}
+	storage *repository.Storage // access to memory and archive storages
+	logger  logger.Logger       // structured logger
+	ticker  *time.Ticker        // triggers periodic execution
+	stop    chan struct{}       // signals worker termination
 }
 
+// NewArchiver constructs a new Archiver instance.
+//
+// interval defines how often the archiving job is executed.
+// The ticker is started immediately.
 func NewArchiver(storage *repository.Storage, logger logger.Logger, interval time.Duration) *Archiver {
 	return &Archiver{
 		storage: storage,
@@ -23,6 +36,12 @@ func NewArchiver(storage *repository.Storage, logger logger.Logger, interval tim
 	}
 }
 
+// Start runs the archiving loop.
+//
+// It blocks and should typically be executed in a goroutine.
+// The loop listens for:
+//   - ticker events to trigger archiving
+//   - stop signal to terminate execution
 func (a *Archiver) Start() {
 	for {
 		select {
@@ -34,6 +53,13 @@ func (a *Archiver) Start() {
 	}
 }
 
+// run performs a single archiving cycle.
+//
+// Workflow:
+//   - determines cutoff time (current UTC time)
+//   - retrieves expired events from memory storage
+//   - saves them to archive storage
+//   - deletes them from memory storage
 func (a *Archiver) run() {
 
 	cutoff := time.Now().UTC()
@@ -68,6 +94,7 @@ func (a *Archiver) run() {
 
 }
 
+// Stop signals the archiver to terminate and stops the ticker.
 func (a *Archiver) Stop() {
 	close(a.stop)
 	a.ticker.Stop()

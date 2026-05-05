@@ -8,6 +8,13 @@ import (
 	"L4.3/internal/models"
 )
 
+// CreateEvent validates and creates a new event in storage.
+//
+// Workflow:
+//  1. validates input event
+//  2. checks per-user event limit
+//  3. persists event in memory storage
+//  4. schedules reminder if configured
 func (s *Service) CreateEvent(event *models.Event) (string, error) {
 
 	if err := validateCreate(event); err != nil {

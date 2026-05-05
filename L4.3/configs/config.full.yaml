@@ -1,24 +1,24 @@
 # Docker environment flag
-docker: true                                          # Indicates containerized run; getenv errors are suppressed (envs come from docker-compose)
+docker: true                                            # Indicates containerized run; getenv errors are suppressed (envs come from docker-compose)
 
 app:
   logger:
-    log_directory: ./logs                             # Directory where logs will be stored; if empty, logs are written to stdout
-    debug_mode: true                                  # Enable debug-level logging
+    log_directory: ./logs                               # Directory where logs will be stored; if empty, logs are written to stdout
+    debug_mode: true                                    # Enable debug-level logging
 
   server:
-    port: "8080"                   # TCP port the server listens on
-    read_timeout: 5s               # Maximum duration for reading the entire request, including body
-    write_timeout: 10s             # Maximum duration before timing out writes of the response
-    max_header_bytes: 1048576      # Maximum size of request headers in bytes (1 MB)
-    shutdown_timeout: 15s          # Timeout for graceful server shutdown
+    port: "8080"                                        # TCP port the server listens on
+    read_timeout: 5s                                    # Maximum duration for reading the entire request, including body
+    write_timeout: 10s                                  # Maximum duration before timing out writes of the response
+    max_header_bytes: 1048576                           # Maximum size of request headers in bytes (1 MB)
+    shutdown_timeout: 15s                               # Timeout for graceful server shutdown
 
   service:
-    max_events_per_user: 3         # Maximum number of events a single user can create
+    max_events_per_user: 3                              # Maximum number of events a single user can create
 
   storage:
-    expected_users: 2              # Expected number of users to pre-allocate storage
-    max_events_per_day: 3          # Maximum number of events a user can create per day
+    expected_users: 2                                   # Expected number of users to pre-allocate storage
+    max_events_per_day: 3                               # Maximum number of events a user can create per day
     goose_dialect: "postgres"                           # Dialect used by goose migrations
     goose_migrations_directory: "./migrations"          # Directory containing migration files
     host: postgres                                      # Database host

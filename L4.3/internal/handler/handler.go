@@ -1,5 +1,8 @@
-// Package handler provides HTTP handler initialization for the application,
-// including API routing, middleware, and Swagger documentation endpoint.
+// Package handler provides HTTP layer initialization, including routing,
+// middleware, and static content handling.
+//
+// It wires service layer handlers into Gin, applies cross-cutting concerns
+// (logging, recovery), and exposes both API and UI endpoints.
 package handler
 
 import (
@@ -17,6 +20,7 @@ import (
 	"github.com/wb-go/wbf/ginext"
 )
 
+// NewHandler constructs and configures the HTTP handler.
 func NewHandler(service service.Service, logger logger.Logger) http.Handler {
 
 	handler := gin.New()
@@ -41,6 +45,11 @@ func NewHandler(service service.Service, logger logger.Logger) http.Handler {
 	return handler
 
 }
+
+// middleware is a request logging middleware.
+//
+// It enriches each request with a unique request_id and logs structured data
+// after the request is processed.
 
 func middleware(logger logger.Logger) gin.HandlerFunc {
 
@@ -88,6 +97,12 @@ func middleware(logger logger.Logger) gin.HandlerFunc {
 
 }
 
+// renderPage returns a handler that renders an HTML template.
+//
+// It sets the appropriate content type and executes the provided template.
+// In case of rendering error, it responds with a generic internal error.
+//
+// Intended for serving the root UI page.
 func renderPage(tmpl *template.Template) gin.HandlerFunc {
 	return func(c *ginext.Context) {
 		c.Header("Content-Type", "text/html; charset=utf-8")
