@@ -1,0 +1,12 @@
+# Logger configuration
+logger:
+  log_directory:                               # Directory for logs, must be mounted via docker-compose volume; if empty, logs are written to stdout
+  debug_mode: true                             # Enable debug-level logging
+
+# HTTP server configuration
+server:
+  port: "8080"                                 # Port where the HTTP server listens; must match the exposed port in docker-compose.full.yaml
+  read_timeout: 5s                             # Maximum duration for reading the entire request
+  write_timeout: 10s                           # Maximum duration before timing out response writes
+  max_header_bytes: 1048576                    # Maximum size of request headers in bytes
+  shutdown_timeout: 10s                        # Timeout for graceful server shutdown
