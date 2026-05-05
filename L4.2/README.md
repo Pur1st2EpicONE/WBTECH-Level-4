@@ -83,7 +83,7 @@ make
 
 * Concurrent Processing: uses goroutines and channels for parallel chunk sorting and asynchronous communication with workers.
 
-* GNU-like Error Handling: mimics GNU sort exit codes and error messages.
+* GNU-like behavior: mimics the full behavior of the original GNU utility, including output format, exit codes, and error handling.
 
 <br>
 
